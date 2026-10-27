@@ -1,5 +1,7 @@
 # 検証結果
 
+> この文書は初期版の検証記録です。60画面への改修後の結果は [docs/VERIFICATION.md](docs/VERIFICATION.md) を参照してください。
+
 2026-10-27 / Node.js 24 / npm 11
 
 ## 確認済み

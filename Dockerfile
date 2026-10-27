@@ -2,8 +2,9 @@ FROM node:24-bookworm-slim AS build
 WORKDIR /app
 COPY package*.json ./
 RUN --mount=type=secret,id=npm_ca if [ -f /run/secrets/npm_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/npm_ca; fi; npm ci --no-audit --no-fund --fetch-retries=1 --fetch-timeout=30000
-COPY index.html vite.config.js ./
+COPY index.html admin.html vite.config.js ./
 COPY src ./src
+COPY public ./public
 RUN npm run build && npm prune --omit=dev --no-audit --no-fund
 
 FROM node:24-bookworm-slim
