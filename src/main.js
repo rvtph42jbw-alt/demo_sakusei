@@ -115,13 +115,14 @@ async function api(path, options = {}) {
 }
 
 $("#app").innerHTML = `<a href="#panel-title" class="skip-link">内容へ移動</a>
-<header class="topbar"><a class="brand" href="#/map" aria-label="まちの安全マップ ホーム"><span class="brand-mark">${icon("pin")}</span><span>まちの安全マップ<small>small discoveries. safer neighborhoods.</small></span></a><div class="header-center"><span class="live-dot"></span>みんなでつくる、まちの安心</div><div class="top-actions">${link("help", icon("help") + "<span>使い方</span>", "quiet-link")}<a class="admin-link" href="/admin.html">管理者ページ ${icon("external")}</a><button class="avatar" data-action="account" aria-label="利用者の設定">G</button></div></header>
+<header class="topbar"><a class="brand" href="#/map" aria-label="まちの安全マップ ホーム"><span class="brand-mark">${icon("pin")}</span><span>まちの安全マップ<small>small discoveries. safer neighborhoods.</small></span></a><div class="header-center"><span class="live-dot"></span>みんなでつくる、まちの安心</div><div class="top-actions">${link("sitemap", icon("grid") + "<span>画面一覧</span><b>60</b>", "directory-link", 'aria-label="60画面の一覧を開く"')}${link("help", icon("help") + "<span>使い方</span>", "quiet-link")}<a class="admin-link" href="/admin.html">管理者ページ ${icon("external")}</a><button class="avatar" data-action="account" aria-label="利用者の設定">G</button></div></header>
 <div class="app-layout"><nav class="rail" aria-label="メインナビゲーション"><div class="rail-main">${[
   ["map", "map", "地図"],
   ["search", "search", "検索"],
   ["report", "flag", "通報"],
   ["evacuation", "shield", "避難情報"],
   ["favorites", "heart", "保存"],
+  ["sitemap", "grid", "画面一覧"],
 ]
   .map(([path, symbol, label]) =>
     link(
@@ -133,7 +134,7 @@ $("#app").innerHTML = `<a href="#panel-title" class="skip-link">内容へ移動<
   )
   .join(
     "",
-  )}</div><div class="rail-bottom">${link("sitemap", icon("grid") + "<span>すべて</span>", "rail-link", 'data-nav="sitemap" aria-label="全60画面"')}${link("settings", icon("settings") + "<span>設定</span>", "rail-link", 'data-nav="settings"')}</div></nav>
+  )}</div><div class="rail-bottom">${link("settings", icon("settings") + "<span>設定</span>", "rail-link", 'data-nav="settings"')}</div></nav>
 <main class="map-workspace"><div id="map" aria-label="まちの安全情報の地図"></div><div class="map-top"><div class="area-tag">${icon("pin")}<span id="area-name">東京都・千代田区周辺</span></div><button class="share-map" data-action="share-map">${icon("share")}<span>この地図を共有</span></button></div>
 <section class="side-panel" aria-label="情報パネル"><div id="panel-content"></div></section>
 <div class="map-filters" aria-label="地図上の分類">${[
@@ -292,8 +293,24 @@ function recordList(items = filtered()) {
 function sectionHeading(title, detail = "") {
   return `<div class="section-heading"><h2>${title}</h2>${detail ? `<span>${detail}</span>` : ""}</div>`;
 }
+function screenTarget(r) {
+  const { params } = current();
+  if (r.path.startsWith("places/") && params.get("id"))
+    return r.path + "?id=" + encodeURIComponent(params.get("id"));
+  return r.path;
+}
+function screenNavigation(r) {
+  const index = routes.indexOf(r);
+  const previous = routes[(index + routes.length - 1) % routes.length];
+  const following = routes[(index + 1) % routes.length];
+  return `<nav class="screen-navigation" aria-label="画面の順番移動">${link(screenTarget(previous), icon("back") + `<span><small>前の画面</small>${previous.title}</span>`, "screen-previous")}${link("sitemap", `<strong>${String(index + 1).padStart(2, "0")} / 60</strong><small>画面一覧</small>`, "screen-position")}${link(screenTarget(following), `<span><small>次の画面</small>${following.title}</span>` + icon("arrow"), "screen-next")}</nav>`;
+}
+function groupNavigation(r) {
+  const group = groups.find(([title]) => title === r.group);
+  return `<nav class="group-navigation" aria-label="${r.group}の画面">${group[2].map(([path, title]) => link(screenTarget(routeByPath.get(path)), title, path === r.path ? "active" : "", path === r.path ? 'aria-current="page"' : "")).join("")}</nav>`;
+}
 function header(r) {
-  return `<div class="panel-header"><div class="breadcrumb">${link("map", "ホーム")}${icon("chevron")}<span>${r.group}</span></div><div class="panel-eyebrow">NEIGHBORHOOD SAFETY</div><h1 id="panel-title" tabindex="-1">${r.title}</h1><p class="panel-description">${r.description}</p></div>`;
+  return `<div class="panel-header"><div class="breadcrumb">${link("map", "ホーム")}${icon("chevron")}<span>${r.group}</span>${r.path ? `<span class="screen-number">SCREEN ${String(routes.indexOf(r) + 1).padStart(2, "0")} / 60</span>` : ""}</div><div class="panel-eyebrow">NEIGHBORHOOD SAFETY</div><h1 id="panel-title" tabindex="-1">${r.title}</h1><p class="panel-description">${r.description}</p></div>`;
 }
 function searchForm() {
   return `<form id="search-form" class="search-box">${icon("search")}<input name="query" value="${esc(state.query)}" type="search" aria-label="場所やキーワードを検索" placeholder="場所やキーワードを検索"><button type="submit" aria-label="検索する">${icon("arrow")}</button></form>`;
@@ -303,13 +320,36 @@ function select(name, label, options, value) {
 }
 function selectedPlaceBody(path) {
   const r = place();
-  if (!r)
-    return empty(
-      "場所を選んでください",
-      "登録された場所の一覧から、詳しく知りたい場所を選びましょう。",
-      "places",
-      "場所の一覧へ",
-    );
+  if (!r) {
+    const context = {
+      "places/detail": [
+        "pin",
+        "場所の状況を詳しく知る",
+        ["名称・分類・危険度", "管理者が記録した状況", "お気に入りへの保存"],
+      ],
+      "places/location": [
+        "locate",
+        "座標と地図上の位置を確認",
+        ["緯度・経度の表示", "地図の中心に移動", "OpenStreetMapで位置を確認"],
+      ],
+      "places/updates": [
+        "clock",
+        "いつ更新されたかを確認",
+        ["現在の対応状況", "最終更新日と登録日", "データのバージョン"],
+      ],
+      "places/share": [
+        "share",
+        "必要な人へ場所のリンクを届ける",
+        ["地点専用のURL", "リンクをコピー", "公開される情報の確認"],
+      ],
+      "places/caution": [
+        "shield",
+        "その場所に合った注意点を確認",
+        ["分類別の行動のヒント", "現地での安全確認", "緊急時の連絡先"],
+      ],
+    }[path];
+    return `<div class="context-preview"><span>${icon(context[0])}</span><h2>${context[1]}</h2><ul>${context[2].map((t) => `<li>${icon("check")}${t}</li>`).join("")}</ul></div>${sectionHeading("確認する場所を選択", state.records.length + "か所")}${state.records.length ? state.records.map((item) => row(placeLink(path, item), esc(item.name), esc(item.category + " · " + item.status), "pin")).join("") : note("実際の登録情報がまだありません。管理者が地点を登録・通報を公開すると、ここから対象の場所を選べます。架空の地点は表示しません。")}${row("places", "登録地点の一覧")}${row("report", "気づいた場所を通報する")}`;
+  }
   const tabs = [
     ["places/detail", "詳細"],
     ["places/location", "位置"],
@@ -549,7 +589,7 @@ function favoritesBody(path) {
   if (path === "favorites/areas")
     return `<form id="area-form"><label class="field">いまの地図に名前をつける<input name="name" maxlength="60" required placeholder="例：いつもの散歩エリア"></label><button class="button primary full" type="submit">${icon("plus")}表示中のエリアを保存</button></form><div class="saved-items">${areas.map((a, i) => `<div class="saved-row">${btn("open-area", icon("map") + esc(a.name), "saved-open", `data-index="${i}"`)}${btn("delete-area", icon("close"), "mini-icon", `data-index="${i}" aria-label="${esc(a.name)}を削除"`)}</div>`).join("") || '<p class="muted">保存したエリアはまだありません。</p>'}</div>`;
   if (path === "favorites/collections")
-    return `<form id="collection-form"><label class="field">新しいコレクション<input name="name" maxlength="60" required placeholder="例：通学路で確認する場所"></label><button class="button primary full" type="submit">${icon("plus")}コレクションを作る</button></form>${collections.map((c) => row("favorites/collection?collection=" + encodeURIComponent(c.id), esc(c.name), `${c.ids.length}か所`, "heart")).join("")}`;
+    return `<div class="detail-section"><h2>用途別に、場所をまとめる。</h2><p>通学路・散歩・仕事など、使う目的ごとに名前をつけましょう。作成したコレクションを開くと、お気に入りの場所を選んで追加できます。</p></div><form id="collection-form"><label class="field">新しいコレクション<input name="name" maxlength="60" required placeholder="例：通学路で確認する場所"></label><button class="button primary full" type="submit">${icon("plus")}コレクションを作る</button></form>${collections.map((c) => row("favorites/collection?collection=" + encodeURIComponent(c.id), esc(c.name), `${c.ids.length}か所`, "heart")).join("")}`;
   if (path === "favorites/collection") {
     const c = collections.find(
       (c) => c.id === current().params.get("collection"),
@@ -749,7 +789,7 @@ function settingsBody(path) {
     return `<div class="about-brand"><span class="brand-mark">${icon("pin")}</span><h2>まちの安全マップ</h2><p>small discoveries.<br>safer neighborhoods.</p></div><p class="body-copy">地域の小さな気づきを共有して、いつものまちに安心をふやすためのサービスです。</p>${row("help/sources", "情報の出典と更新")}${row("help/accessibility", "アクセシビリティ")}<a href="/admin.html" class="nav-row"><span><strong>管理者ページ</strong><small>地点の管理・通報確認・操作履歴</small></span>${icon("external")}</a>`;
 }
 function home() {
-  return `<div class="home-intro"><div class="home-eyebrow"><span class="tiny-spark">✳</span> A LITTLE SAFER, TOGETHER</div><h1 id="panel-title" tabindex="-1">まちを知る。<br>安心が、見えてくる。</h1><p>いつもの道も、はじめての場所も。<br>地域の気づきで、もっと安心に。</p>${searchForm()}</div><div class="home-content"><div class="community-stats"><div><strong>${state.records.length}<small>か所</small></strong><span>まちの気づき</span></div><div><strong>${state.records.filter((r) => r.status === "対応済").length}<small>か所</small></strong><span>安心につながった場所</span></div></div>${sectionHeading("気になる情報を探す")}<div class="category-grid">${[
+  return `<div class="home-intro"><div class="home-eyebrow"><span class="tiny-spark">✳</span> A LITTLE SAFER, TOGETHER</div><h1 id="panel-title" tabindex="-1">まちを知る。<br>安心が、見えてくる。</h1><p>いつもの道も、はじめての場所も。<br>地域の気づきで、もっと安心に。</p>${searchForm()}</div><div class="home-content">${link("sitemap", `<span>${icon("grid")}目的別の画面から探す</span><strong>60画面 ${icon("arrow")}</strong>`, "home-directory-link")}<div class="community-stats"><div><strong>${state.records.length}<small>か所</small></strong><span>まちの気づき</span></div><div><strong>${state.records.filter((r) => r.status === "対応済").length}<small>か所</small></strong><span>安心につながった場所</span></div></div>${sectionHeading("気になる情報を探す")}<div class="category-grid">${[
     ["map/traffic", "car", "交通の安全", "peach"],
     ["map/crime", "shield", "防犯情報", "lavender"],
     ["map/disaster", "cloud", "災害の備え", "blue"],
@@ -776,7 +816,7 @@ function body(r) {
   if (path.startsWith("favorites")) return favoritesBody(path);
   if (path.startsWith("settings")) return settingsBody(path);
   if (path === "sitemap")
-    return `<p class="body-copy">目的の異なる全60画面に、ここから移動できます。</p>${groups.map(([title, symbol, items]) => `<details class="sitemap-group" open><summary>${icon(symbol)}${title}<span>${items.length}</span></summary><div>${items.map(([p, t], i) => link(p, `<span>${String(routes.findIndex((r) => r.path === p) + 1).padStart(2, "0")}</span>${t}${icon("chevron")}`)).join("")}</div></details>`).join("")}`;
+    return `<div class="directory-intro"><div><span class="directory-overline">EXPLORE ALL SCREENS</span><h2>やりたいことから、画面を選ぶ。</h2><p>8つのカテゴリー・全60画面。カードを押して開けます。各画面の「前の画面・次の画面」でも順番に移動できます。</p></div><div class="directory-total"><strong>60</strong><span>SCREENS / 8 CATEGORIES</span></div></div><div class="directory-categories">${groups.map(([title, symbol, items], i) => `<button type="button" data-action="directory-group" data-group="${i}">${icon(symbol)}${title}<span>${items.length}</span></button>`).join("")}</div><div class="directory-grid">${groups.map(([title, symbol, items], i) => `<details class="sitemap-group" data-directory-group="${i}" open><summary>${icon(symbol)}${title}<span>${items.length}画面</span></summary><div>${items.map(([p, t, d]) => link(p, `<span class="directory-number">${String(routes.findIndex((item) => item.path === p) + 1).padStart(2, "0")}</span><span class="directory-copy"><strong>${t}</strong><small>${d}</small></span>${icon("chevron")}`)).join("")}</div></details>`).join("")}</div>`;
   if (path === "help")
     return (
       Object.keys(helpContent)
@@ -808,8 +848,61 @@ function body(r) {
       )}</fieldset>${sectionHeading("危険箇所の表示")}${row("map", "すべて表示")}${row("map/traffic", "交通のみ")}${row("map/crime", "防犯のみ")}${row("map/disaster", "災害のみ")}${row("map/resolved", "対応済みの場所")}`;
   if (path === "map/nearby")
     return `${btn("locate", icon("locate") + "現在地を中心に表示", "button primary full")}${note("位置情報の利用にはブラウザーの許可が必要です。周辺情報は下の「この範囲を探す」で確認できます。")}${row("search/area", "この範囲を探す")}${recordList()}`;
-  if (path.startsWith("map/"))
-    return `${sectionHeading("登録情報", filtered().length + "か所")}${recordList()}`;
+  if (path.startsWith("map/")) {
+    const categoryGuides = {
+      "map/traffic": [
+        "car",
+        "見通し・交差点・通学路",
+        "交通の安全を確認する",
+        [
+          "交差点では一度止まって左右を確認",
+          "車や自転車の動きに注意",
+          "子どもと一緒に通学路を確認",
+        ],
+      ],
+      "map/crime": [
+        "shield",
+        "夜道・明るさ・周囲の様子",
+        "いつもの道を、安心して歩く",
+        [
+          "暗い道では周囲と明るさを確認",
+          "不安を感じたら人通りのある場所へ",
+          "緊急の事件・事故は110番へ",
+        ],
+      ],
+      "map/disaster": [
+        "cloud",
+        "浸水・崖・災害の注意箇所",
+        "災害リスクを知って備える",
+        [
+          "公的なハザードマップを確認",
+          "自治体の避難情報を優先",
+          "危険な場所の様子を見に行かない",
+        ],
+      ],
+      "map/facilities": [
+        "sun",
+        "照明・道路・公共の設備",
+        "小さな不具合を、まちで共有",
+        [
+          "破損した設備に近づかない",
+          "位置と状況を記録して通報",
+          "修理・対応は管理者が確認",
+        ],
+      ],
+      "map/resolved": [
+        "check",
+        "地域の取り組み・改善の記録",
+        "安心につながった場所",
+        [
+          "管理者が対応済みに更新した情報",
+          "改善後も現地の状況を確認",
+          "新たな気づきは通報で共有",
+        ],
+      ],
+    }[path];
+    return `${categoryGuides ? `<div class="category-guide category-${path.split("/")[1]}"><div>${icon(categoryGuides[0])}<span>${categoryGuides[1]}</span></div><h2>${categoryGuides[2]}</h2><ul>${categoryGuides[3].map((t) => `<li>${t}</li>`).join("")}</ul></div>` : ""}${sectionHeading("登録情報", filtered().length + "か所")}${recordList()}${row("search/filters", "さらに条件を絞り込む")}${path === "map/disaster" ? row("evacuation", "災害別の備えを確認") : row("report", "この種類の気づきを通報する")}`;
+  }
   if (path === "search")
     return `${searchForm()}<div class="search-shortcuts">${row("search/filters", "条件を指定する", "危険度・分類・対応状況")}${row("search/area", "地図の範囲から探す")}${row("search/history", "最近の検索")}${row("search/saved", "保存した検索")}</div>${note("登録地点の名称・メモが検索対象です。住所検索には対応していません。")}`;
   if (path === "search/results")
@@ -861,6 +954,24 @@ function body(r) {
 function renderPanel(focus = true) {
   const { path } = current();
   const r = routeByPath.get(path);
+  const workspace = $(".map-workspace");
+  const family = path.split("/")[0];
+  workspace.className =
+    "map-workspace " +
+    (path === "sitemap"
+      ? "directory-view"
+      : family === "evacuation" ||
+          family === "help" ||
+          family === "settings" ||
+          family === "favorites"
+        ? "content-view"
+        : family === "search"
+          ? "search-view"
+          : family === "report" && path !== "report/location"
+            ? "form-view"
+            : "map-view");
+  workspace.dataset.screen = path;
+  $("#panel-content").dataset.screen = path;
   document.title = (r?.title || "画面が見つかりません") + "｜まちの安全マップ";
   $("#panel-content").innerHTML = !r
     ? header({
@@ -870,9 +981,10 @@ function renderPanel(focus = true) {
       }) +
       `<div class="panel-body">${empty("こちらからお探しください", "すべての機能は画面一覧から選べます。", "sitemap", "画面一覧へ", "search")}</div>`
     : path === "map"
-      ? home()
+      ? home() + screenNavigation(r)
       : header(r) +
-        `<div class="panel-body">${body(r)}</div><div class="screen-footer">${link("sitemap", icon("grid") + "すべての画面")}<span>${String(routes.indexOf(r) + 1).padStart(2, "0")} / 60</span></div>`;
+        (path === "sitemap" ? "" : groupNavigation(r)) +
+        `<div class="panel-body">${body(r)}</div>${screenNavigation(r)}<div class="screen-footer">${link("sitemap", icon("grid") + "すべての画面")}<span>${String(routes.indexOf(r) + 1).padStart(2, "0")} / 60</span></div>`;
   for (const el of document.querySelectorAll("[data-nav]")) {
     const p = el.dataset.nav;
     const active =
@@ -1126,6 +1238,18 @@ document.addEventListener("click", async (e) => {
   const el = e.target.closest("[data-action]");
   if (!el) return;
   const a = el.dataset.action;
+  if (a === "directory-group") {
+    const group = document.querySelector(
+      `[data-directory-group="${el.dataset.group}"]`,
+    );
+    if (group) {
+      group.open = true;
+      group.scrollIntoView({
+        behavior: state.preferences.reduceMotion ? "instant" : "smooth",
+        block: "start",
+      });
+    }
+  }
   const index = Number(el.dataset.index),
     id = el.dataset.id;
   if (a === "zoom-in") map.zoomIn();
