@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.log
+data/
+backups/
+.env
+.env.*
+!.env.example
