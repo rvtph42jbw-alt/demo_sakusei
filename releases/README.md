@@ -24,3 +24,11 @@ ZIPにはソース、ビルド済みファイル、起動手順、画面一覧�
 - [資料一式のZIPをダウンロード](https://github.com/rvtph42jbw-alt/demo_sakusei/raw/refs/heads/codex/safety-map-60screens/releases/machi-safety-flowcharts.zip)
 
 利用者60画面の全体構成と、利用者60組・管理者10組の計70操作フローを「選択→確認→終了」で整理しています。同じ画面での操作・通知・ダイアログ・外部サイトの移動も明記しています。PDF、通信不要のHTML、編集用Mermaid、CSV、JSONを同梱しています。アプリのUIには追加していません。
+
+## 参考Excelの形式に合わせた画面遷移図
+
+- [編集用Excelをダウンロード（15シート）](https://github.com/rvtph42jbw-alt/demo_sakusei/raw/refs/heads/codex/safety-map-60screens/releases/machi-safety-transition-reference.xlsx)
+- [印刷用PDFを開く（31ページ）](https://github.com/rvtph42jbw-alt/demo_sakusei/raw/refs/heads/codex/safety-map-60screens/releases/machi-safety-transition-reference.pdf)
+- [ExcelとPDFのZIPをダウンロード](https://github.com/rvtph42jbw-alt/demo_sakusei/raw/refs/heads/codex/safety-map-60screens/releases/machi-safety-transition-reference.zip)
+
+白い画面枠と黒い矢印、操作名、戻る経路、入力エラーを機能別に配置しています。利用者60画面と70組の選択・確認・終了を収録。資料なのでファイルを直接開いてください。サイトの起動操作は不要です。
