@@ -73,14 +73,15 @@ try {
   assert.equal(created.status, 201);
   const record = await created.json();
   await page.goto(base, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "まちを知る。" }).count();
+  await page.getByRole("heading", { name: "千代田区の安全マップ" }).count();
   await page.screenshot({ path: join(artifacts, "home-desktop.png") });
   assert.equal(routes.length, 60);
   assert.equal(new Set(routes.map((r) => r.path)).size, 60);
   // Every route is reached by clicking its actual link from the screen directory.
   for (const r of routes) {
     await page.goto(base + "/#/sitemap");
-    await page.locator(`.sitemap-group a[href="#/${r.path}"]`).click();
+    if (r.path !== "sitemap")
+      await page.locator(`.sitemap-group a[href="#/${r.path}"]`).click();
     await page.waitForFunction(
       (path) => (location.hash.replace(/^#\/?/, "") || "map") === path,
       r.path,
@@ -88,7 +89,7 @@ try {
     if (r.path === "map")
       await page
         .locator("#panel-title")
-        .filter({ hasText: "まちを知る。" })
+        .filter({ hasText: "千代田区の安全マップ" })
         .waitFor();
     else
       await page.locator("#panel-title").filter({ hasText: r.title }).waitFor();
@@ -364,7 +365,8 @@ try {
   await page.screenshot({ path: join(artifacts, "home-mobile.png") });
   for (const r of routes) {
     await page.goto(base + "/#/sitemap");
-    await page.locator(`.sitemap-group a[href="#/${r.path}"]`).click();
+    if (r.path !== "sitemap")
+      await page.locator(`.sitemap-group a[href="#/${r.path}"]`).click();
     await page.waitForFunction(
       (path) => (location.hash.replace(/^#\/?/, "") || "map") === path,
       r.path,

@@ -40,28 +40,26 @@ try {
     const page = await context.newPage();
     page.on("pageerror", (e) => failures.push(e.message));
     await page.goto(base, { waitUntil: "networkidle" });
-    await page
-      .getByRole("link", { name: "60画面の一覧を開く", exact: true })
-      .click();
+    // Reach the normal sitemap through settings → help, including on mobile.
+    await page.locator('[data-action="account"]').click();
+    await page.locator('.screen-footer a[href="#/help"]').click();
+    await page.locator('.nav-row[href="#/sitemap"]').click();
     await page.locator(".directory-grid").waitFor();
-    assert.equal(await page.locator(".sitemap-group a").count(), 60);
+    assert.equal(
+      await page.locator(".sitemap-group a").count(),
+      routes.length - 1,
+    );
     await page.screenshot({
       path: join(
         artifacts,
-        viewport.width === 390
-          ? "directory-mobile.png"
-          : "directory-desktop.png",
+        viewport.width === 390 ? "sitemap-mobile.png" : "sitemap-desktop.png",
       ),
     });
-    await page.getByRole("button", { name: "使い方・ご案内" }).click();
-    assert.equal(
-      await page.locator('[data-directory-group="7"]').getAttribute("open"),
-      "",
-    );
     const contentBodies = new Set();
     for (const r of routes) {
       await page.goto(base + "/#/sitemap");
-      await page.locator(`.sitemap-group a[href="#/${r.path}"]`).click();
+      if (r.path !== "sitemap")
+        await page.locator(`.sitemap-group a[href="#/${r.path}"]`).click();
       await page.waitForFunction(
         (path) =>
           document.querySelector("#panel-content")?.dataset.screen === path,
@@ -74,9 +72,18 @@ try {
         .innerText();
       assert.ok(body.trim().length > 20, "empty screen: " + r.path);
       contentBodies.add(body);
-      const next = await page.locator(".screen-next").getAttribute("href");
-      const expected = routes[(routes.indexOf(r) + 1) % routes.length].path;
-      assert.equal(next, "#/" + expected);
+      const visibleText = await page.locator("body").innerText();
+      assert.doesNotMatch(
+        visibleText,
+        /60画面|全60|SCREEN \d|\/\s*60|前の画面|次の画面|SCREENS|画面一覧/,
+        "graduation requirements must not appear in the product",
+      );
+      assert.equal(
+        await page
+          .locator(".screen-navigation,.screen-number,.directory-total")
+          .count(),
+        0,
+      );
       assert.equal(
         await page
           .locator("body")
@@ -91,26 +98,8 @@ try {
       60,
       "Every empty-data screen must have distinct purpose-specific content",
     );
-    // Demonstrate an actual 60-screen journey without returning to the directory.
-    await page.goto(base + "/#/map");
-    for (let i = 0; i < 60; i++) {
-      await page.waitForFunction(
-        (path) =>
-          document.querySelector("#panel-content")?.dataset.screen === path,
-        routes[i].path,
-      );
-      await page.locator(".screen-next").click();
-    }
-    await page.waitForFunction(
-      () => document.querySelector("#panel-content")?.dataset.screen === "map",
-    );
-    await page.reload();
-    assert.equal(
-      await page.locator("#panel-content").getAttribute("data-screen"),
-      "map",
-    );
     console.log(
-      `PASS: ${viewport.width}px, first-launch empty data, visible directory → 60 distinct screens, next-page journey through all 60`,
+      `PASS: ${viewport.width}px, empty data, all required routes reached through ordinary site navigation, distinct content, no requirement counters`,
     );
     await context.close();
   }

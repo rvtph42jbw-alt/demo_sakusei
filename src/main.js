@@ -115,14 +115,13 @@ async function api(path, options = {}) {
 }
 
 $("#app").innerHTML = `<a href="#panel-title" class="skip-link">内容へ移動</a>
-<header class="topbar"><a class="brand" href="#/map" aria-label="まちの安全マップ ホーム"><span class="brand-mark">${icon("pin")}</span><span>まちの安全マップ<small>small discoveries. safer neighborhoods.</small></span></a><div class="header-center"><span class="live-dot"></span>みんなでつくる、まちの安心</div><div class="top-actions">${link("sitemap", icon("grid") + "<span>画面一覧</span><b>60</b>", "directory-link", 'aria-label="60画面の一覧を開く"')}${link("help", icon("help") + "<span>使い方</span>", "quiet-link")}<a class="admin-link" href="/admin.html">管理者ページ ${icon("external")}</a><button class="avatar" data-action="account" aria-label="利用者の設定">G</button></div></header>
+<header class="topbar"><a class="brand" href="#/map" aria-label="まちの安全マップ ホーム"><span class="brand-mark">${icon("map")}</span><span>まちの安全マップ<small>Community safety, mapped.</small></span></a><nav class="header-center" aria-label="サイトナビゲーション">${link("map", "地図をみる", "", 'data-nav="map"')}${link("evacuation", "避難・防災", "", 'data-nav="evacuation"')}${link("favorites", "お気に入り", "", 'data-nav="favorites"')}</nav><div class="top-actions">${link("help", icon("help"), "quiet-link", 'aria-label="使い方"')}<a class="admin-link" href="/admin.html">管理者 ${icon("external")}</a>${link("report", icon("plus") + "通報する", "header-report")}<button class="avatar" data-action="account" aria-label="利用者の設定">G</button></div></header>
 <div class="app-layout"><nav class="rail" aria-label="メインナビゲーション"><div class="rail-main">${[
   ["map", "map", "地図"],
   ["search", "search", "検索"],
   ["report", "flag", "通報"],
   ["evacuation", "shield", "避難情報"],
   ["favorites", "heart", "保存"],
-  ["sitemap", "grid", "画面一覧"],
 ]
   .map(([path, symbol, label]) =>
     link(
@@ -299,18 +298,12 @@ function screenTarget(r) {
     return r.path + "?id=" + encodeURIComponent(params.get("id"));
   return r.path;
 }
-function screenNavigation(r) {
-  const index = routes.indexOf(r);
-  const previous = routes[(index + routes.length - 1) % routes.length];
-  const following = routes[(index + 1) % routes.length];
-  return `<nav class="screen-navigation" aria-label="画面の順番移動">${link(screenTarget(previous), icon("back") + `<span><small>前の画面</small>${previous.title}</span>`, "screen-previous")}${link("sitemap", `<strong>${String(index + 1).padStart(2, "0")} / 60</strong><small>画面一覧</small>`, "screen-position")}${link(screenTarget(following), `<span><small>次の画面</small>${following.title}</span>` + icon("arrow"), "screen-next")}</nav>`;
-}
 function groupNavigation(r) {
   const group = groups.find(([title]) => title === r.group);
   return `<nav class="group-navigation" aria-label="${r.group}の画面">${group[2].map(([path, title]) => link(screenTarget(routeByPath.get(path)), title, path === r.path ? "active" : "", path === r.path ? 'aria-current="page"' : "")).join("")}</nav>`;
 }
 function header(r) {
-  return `<div class="panel-header"><div class="breadcrumb">${link("map", "ホーム")}${icon("chevron")}<span>${r.group}</span>${r.path ? `<span class="screen-number">SCREEN ${String(routes.indexOf(r) + 1).padStart(2, "0")} / 60</span>` : ""}</div><div class="panel-eyebrow">NEIGHBORHOOD SAFETY</div><h1 id="panel-title" tabindex="-1">${r.title}</h1><p class="panel-description">${r.description}</p></div>`;
+  return `<div class="panel-header"><div class="breadcrumb">${link("map", "ホーム")}${icon("chevron")}<span>${r.group}</span></div><div class="panel-eyebrow">NEIGHBORHOOD SAFETY</div><h1 id="panel-title" tabindex="-1">${r.title}</h1><p class="panel-description">${r.description}</p></div>`;
 }
 function searchForm() {
   return `<form id="search-form" class="search-box">${icon("search")}<input name="query" value="${esc(state.query)}" type="search" aria-label="場所やキーワードを検索" placeholder="場所やキーワードを検索"><button type="submit" aria-label="検索する">${icon("arrow")}</button></form>`;
@@ -789,22 +782,13 @@ function settingsBody(path) {
     return `<div class="about-brand"><span class="brand-mark">${icon("pin")}</span><h2>まちの安全マップ</h2><p>small discoveries.<br>safer neighborhoods.</p></div><p class="body-copy">地域の小さな気づきを共有して、いつものまちに安心をふやすためのサービスです。</p>${row("help/sources", "情報の出典と更新")}${row("help/accessibility", "アクセシビリティ")}<a href="/admin.html" class="nav-row"><span><strong>管理者ページ</strong><small>地点の管理・通報確認・操作履歴</small></span>${icon("external")}</a>`;
 }
 function home() {
-  return `<div class="home-intro"><div class="home-eyebrow"><span class="tiny-spark">✳</span> A LITTLE SAFER, TOGETHER</div><h1 id="panel-title" tabindex="-1">まちを知る。<br>安心が、見えてくる。</h1><p>いつもの道も、はじめての場所も。<br>地域の気づきで、もっと安心に。</p>${searchForm()}</div><div class="home-content">${link("sitemap", `<span>${icon("grid")}目的別の画面から探す</span><strong>60画面 ${icon("arrow")}</strong>`, "home-directory-link")}<div class="community-stats"><div><strong>${state.records.length}<small>か所</small></strong><span>まちの気づき</span></div><div><strong>${state.records.filter((r) => r.status === "対応済").length}<small>か所</small></strong><span>安心につながった場所</span></div></div>${sectionHeading("気になる情報を探す")}<div class="category-grid">${[
-    ["map/traffic", "car", "交通の安全", "peach"],
-    ["map/crime", "shield", "防犯情報", "lavender"],
-    ["map/disaster", "cloud", "災害の備え", "blue"],
-    ["map/facilities", "sun", "設備・道路", "yellow"],
-  ]
-    .map(([p, i, t, c]) =>
-      link(
-        p,
-        `<span class="category-icon ${c}">${icon(i)}</span><span>${t}</span>${icon("chevron")}`,
-        "category-tile",
-      ),
-    )
-    .join(
-      "",
-    )}</div><div class="section-heading"><h2>まちの最新情報</h2>${link("places", "すべてみる " + icon("arrow"), "text-link")}</div>${state.error ? note("情報を取得できません。更新ボタンで再試行してください。") : state.records.length ? state.records.slice(0, 2).map(card).join("") : `<div class="welcome-card"><span class="welcome-art">${icon("leaf")}<i></i><b></b></span><div><strong>このまちの安心を、一緒に。</strong><p>まだ気づきは登録されていません。<br>あなたのひとことが、最初の一歩に。</p></div></div>`}${link("report", `<span class="report-cta-icon">${icon("flag")}</span><span><strong>まちの気づきを届ける</strong><small>気になる場所を見つけたら</small></span>${icon("arrow")}`, "report-cta")}<div class="panel-bottom-links">${link("evacuation", icon("shield") + "避難・防災ガイド")}${link("help/emergency", "緊急時は110・119へ")}</div><p class="small-disclaimer">地域の共有情報です。安全を保証するものではありません。</p></div>`;
+  const categories = [
+    ["map/traffic", "car", "交通", "交通", "#f0a27d"],
+    ["map/crime", "shield", "防犯", "防犯", "#aa9adc"],
+    ["map/disaster", "cloud", "災害", "災害", "#83bdbf"],
+    ["map/facilities", "sun", "設備", "設備", "#d2b669"],
+  ];
+  return `<div class="home-intro"><div class="home-eyebrow"><span class="project-status"></span> COMMUNITY MAP <span class="public-map">公開マップ</span></div><h1 id="panel-title" tabindex="-1">千代田区の安全マップ</h1><p>いつものまちを、もっと安心に。<br>地域の気づきを地図で確認しましょう。</p><div class="project-meta">${icon("pin")}東京都・千代田区周辺<span>·</span>${state.records.length}件の情報</div>${searchForm()}</div><div class="home-content"><div class="home-section-tabs"><span class="active">地域の情報</span>${link("map/layers", icon("layers") + "地図の表示")}</div><div class="section-heading"><h2>情報を絞り込む</h2>${link("search/filters", icon("settings"), "text-link", 'aria-label="検索条件を設定"')}</div><div class="layer-list">${categories.map(([path, symbol, title, category, color]) => link(path, `<span class="layer-symbol" style="--layer-color:${color}">${icon(symbol)}</span><span class="layer-title">${title}<small>${{ 交通: "交差点・通学路・見通し", 防犯: "夜道・明るさ・周囲の様子", 災害: "浸水・崖などの注意箇所", 設備: "照明・道路・公共設備" }[category]}</small></span><span class="layer-count">${state.records.filter((r) => r.category === category).length}</span>${icon("chevron")}`, "layer-row")).join("")}</div><div class="section-heading latest-heading"><h2>最近の気づき</h2>${link("places", "すべてみる " + icon("arrow"), "text-link")}</div>${state.error ? note("情報を取得できません。更新ボタンで再試行してください。") : state.records.length ? state.records.slice(0, 2).map(card).join("") : `<div class="map-empty"><div class="map-empty-art"><span>${icon("pin")}</span><i></i><b></b></div><h3>最初の気づきを、地図に。</h3><p>このエリアの情報はまだありません。<br>気になる場所を見つけたら教えてください。</p>${link("report", icon("plus") + "気づきを通報する", "button full")}</div>`}<div class="home-shortcuts">${link("search/area", icon("map") + "表示中のエリアを調べる" + icon("arrow"))}${link("evacuation", icon("shield") + "もしものときの備え" + icon("arrow"))}</div><footer class="home-note">地域の共有情報です。緊急時は110・119へ。<span>${link("help/sources", "情報の出典")}${link("help", "使い方")}</span></footer></div>`;
 }
 function body(r) {
   const { path } = r;
@@ -816,7 +800,20 @@ function body(r) {
   if (path.startsWith("favorites")) return favoritesBody(path);
   if (path.startsWith("settings")) return settingsBody(path);
   if (path === "sitemap")
-    return `<div class="directory-intro"><div><span class="directory-overline">EXPLORE ALL SCREENS</span><h2>やりたいことから、画面を選ぶ。</h2><p>8つのカテゴリー・全60画面。カードを押して開けます。各画面の「前の画面・次の画面」でも順番に移動できます。</p></div><div class="directory-total"><strong>60</strong><span>SCREENS / 8 CATEGORIES</span></div></div><div class="directory-categories">${groups.map(([title, symbol, items], i) => `<button type="button" data-action="directory-group" data-group="${i}">${icon(symbol)}${title}<span>${items.length}</span></button>`).join("")}</div><div class="directory-grid">${groups.map(([title, symbol, items], i) => `<details class="sitemap-group" data-directory-group="${i}" open><summary>${icon(symbol)}${title}<span>${items.length}画面</span></summary><div>${items.map(([p, t, d]) => link(p, `<span class="directory-number">${String(routes.findIndex((item) => item.path === p) + 1).padStart(2, "0")}</span><span class="directory-copy"><strong>${t}</strong><small>${d}</small></span>${icon("chevron")}`)).join("")}</div></details>`).join("")}</div>`;
+    return `<div class="directory-intro"><div><h2>使いたい機能を探す</h2><p>地域の情報を調べる、気づきを届ける、災害に備える。目的に合う機能をご案内します。</p></div></div><div class="directory-grid">${groups
+      .map(
+        ([title, symbol, items]) =>
+          `<details class="sitemap-group" open><summary>${icon(symbol)}${title}</summary><div>${items
+            .filter(([p]) => p !== "sitemap")
+            .map(([p, t, d]) =>
+              link(
+                p,
+                `<span class="directory-copy"><strong>${t}</strong><small>${d}</small></span>${icon("chevron")}`,
+              ),
+            )
+            .join("")}</div></details>`,
+      )
+      .join("")}</div>`;
   if (path === "help")
     return (
       Object.keys(helpContent)
@@ -824,7 +821,7 @@ function body(r) {
           const r = routeByPath.get("help/" + p);
           return row(r.path, r.title, r.description);
         })
-        .join("") + row("sitemap", "すべての画面", "60画面の一覧")
+        .join("") + row("sitemap", "サイトマップ", "目的に合う機能を探す")
     );
   if (path.startsWith("help/")) {
     const [title, items] = helpContent[path.split("/")[1]];
@@ -979,12 +976,12 @@ function renderPanel(focus = true) {
         group: "ご案内",
         description: "リンク先を確認してください。",
       }) +
-      `<div class="panel-body">${empty("こちらからお探しください", "すべての機能は画面一覧から選べます。", "sitemap", "画面一覧へ", "search")}</div>`
+      `<div class="panel-body">${empty("こちらからお探しください", "サイトマップから目的に合う機能を探せます。", "sitemap", "サイトマップへ", "search")}</div>`
     : path === "map"
-      ? home() + screenNavigation(r)
+      ? home()
       : header(r) +
         (path === "sitemap" ? "" : groupNavigation(r)) +
-        `<div class="panel-body">${body(r)}</div>${screenNavigation(r)}<div class="screen-footer">${link("sitemap", icon("grid") + "すべての画面")}<span>${String(routes.indexOf(r) + 1).padStart(2, "0")} / 60</span></div>`;
+        `<div class="panel-body">${body(r)}</div><footer class="screen-footer">${link("help", "使い方")}${link("help/sources", "情報の出典")}${link("sitemap", "サイトマップ")}</footer>`;
   for (const el of document.querySelectorAll("[data-nav]")) {
     const p = el.dataset.nav;
     const active =
@@ -1238,18 +1235,6 @@ document.addEventListener("click", async (e) => {
   const el = e.target.closest("[data-action]");
   if (!el) return;
   const a = el.dataset.action;
-  if (a === "directory-group") {
-    const group = document.querySelector(
-      `[data-directory-group="${el.dataset.group}"]`,
-    );
-    if (group) {
-      group.open = true;
-      group.scrollIntoView({
-        behavior: state.preferences.reduceMotion ? "instant" : "smooth",
-        block: "start",
-      });
-    }
-  }
   const index = Number(el.dataset.index),
     id = el.dataset.id;
   if (a === "zoom-in") map.zoomIn();

@@ -29,7 +29,7 @@ if not exist dist\index.html (
 )
 echo.
 echo After "Safety server listening on port 3000" appears, open:
-echo http://localhost:3000/#/sitemap
+echo http://localhost:3000
 echo Keep this window open. Press Ctrl+C to stop.
 echo.
 call npm.cmd start
