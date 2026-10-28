@@ -40,3 +40,10 @@ ZIPにはソース、ビルド済みファイル、起動手順、画面一覧�
 - [Excel・PDF一式のZIP](https://github.com/rvtph42jbw-alt/demo_sakusei/raw/refs/heads/codex/safety-map-60screens/releases/machi-safety-transition-proposal.zip)
 
 3利用区分、写真付き報告、提出先振り分け、自治会の要望取りまとめ、点検、優先度、修繕、再点検、避難経路、私有地・所有者連絡、組織・権限等を反映。70組の選択・確認・終了、企画書全20項目の対応表と現行実装との差分、未確定事項を収録しています。追加企画書に基づく設計資料で、未実装の機能を含みます。資料を開く際にPowerShell・npmでの操作は不要です。
+
+## 編集用draw.ioファイル（追加企画書反映版）
+
+- [draw.ioファイルをダウンロード](https://github.com/rvtph42jbw-alt/demo_sakusei/raw/refs/heads/codex/safety-map-60screens/releases/machi-safety-transition-proposal.drawio)
+- [draw.ioと開き方のZIP](https://github.com/rvtph42jbw-alt/demo_sakusei/raw/refs/heads/codex/safety-map-60screens/releases/machi-safety-transition-drawio.zip)
+
+31ページ・70操作を収録。diagrams.netの「ファイル → デバイスから開く」で読み込めます。枠・矢印・文字を個別に編集できます。未実装機能を含む設計案です。
